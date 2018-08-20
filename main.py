@@ -21,7 +21,7 @@ def get_theta(embedding_dim, num_samples=50):
     return torch.from_numpy(theta).type(torch.FloatTensor)
 
 
-def sliced_wasserstein_distance(encoded_samples, distribution_fn=random_circle, num_projections=50, p=2):
+def sliced_wasserstein_distance(encoded_samples, distribution_fn=random_uniform, num_projections=50, p=2):
 
     batch_size = encoded_samples.size(0)
     z_samples = distribution_fn(batch_size)
@@ -85,7 +85,7 @@ optimizer = torch.optim.Adam(ae.parameters())
 total_epoch = 20
 
 
-trainer = SAE(ae, optimizer, random_circle)
+trainer = SAE(ae, optimizer, random_uniform)
 ae.train()
 
 
