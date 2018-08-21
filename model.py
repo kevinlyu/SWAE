@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 class Autoencoder(nn.Module):
 
-    def __init__(self, in_channels=16, lrelu_slope=0.2, fc_dim=128, encoded_dim=2):
+    def __init__(self, in_channels=16, lrelu_slope=0.2, fc_dim=128, encoded_dim=10):
         super(Autoencoder, self).__init__()
 
         self.in_channels = in_channels

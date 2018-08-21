@@ -11,7 +11,6 @@ def random_circle(batch_size):
     x = r*np.cos(theta)
     y = r*np.sin(theta)
     z = np.array([x, y]).T
-
     return torch.from_numpy(z).type(torch.FloatTensor)
 
 
@@ -22,5 +21,5 @@ def random_ring(batch_size):
 
 
 def random_uniform(batch_size):
-    z = 2*(np.random.uniform(size=(batch_size, 2))-0.5)
+    z = 2*(np.random.uniform(size=(batch_size, 10))-0.5)
     return torch.from_numpy(z).type(torch.FloatTensor)

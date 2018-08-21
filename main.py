@@ -10,10 +10,14 @@ import numpy as np
 from distributions import *
 import torch.nn.functional as F
 
+from dataloader import *
+
 '''
 Implementation of Sliced Wasserstein Autoencoder (SWAE)
 Reference: https://github.com/eifuentes/swae-pytorch
 '''
+
+
 def get_theta(embedding_dim, num_samples=50):
     theta = [w/np.sqrt((w**2).sum())
              for w in np.random.normal(size=(num_samples, embedding_dim))]
@@ -22,12 +26,13 @@ def get_theta(embedding_dim, num_samples=50):
 
 
 def sliced_wasserstein_distance(encoded_samples, distribution_fn=random_uniform, num_projections=50, p=2):
-
+    
     batch_size = encoded_samples.size(0)
     z_samples = distribution_fn(batch_size)
     embedding_dim = z_samples.size(1)
 
     theta = get_theta(embedding_dim, num_projections)
+    encoded_samples = encoded_samples.cpu()
     proj_ae = encoded_samples.matmul(theta.transpose(0, 1))
     proj_z = z_samples.matmul(theta.transpose(0, 1))
     w_distance = torch.sort(proj_ae.transpose(0, 1), dim=1)[
@@ -51,18 +56,18 @@ class SAE:
 
     def train(self, x):
         self.optimizer.zero_grad()
-        x.cuda()
+        #x.cuda()
         recon_x, z = self.model(x)
-        
+
         l1 = F.l1_loss(recon_x, x)
         bce = F.binary_cross_entropy(recon_x, x)
 
         recon_x = recon_x.cpu()
-        z = z.cpu()
+        #z = z.cpu()
 
         w2 = float(self.weight_swd)*sliced_wasserstein_distance(z,
-                                                              self.distribution_fn, self.num_projections, self.p)
-        w2=w2.cuda()
+                                                                self.distribution_fn, self.num_projections, self.p)
+        w2 = w2.cuda()
         loss = l1+bce+w2
 
         loss.backward()
@@ -71,21 +76,20 @@ class SAE:
         return {'loss': loss, 'bce': bce, 'l1': l1, 'w2': w2, 'encode': z, 'decode': recon_x}
 
 
-
 mnist = torch.utils.data.DataLoader(datasets.MNIST("./mnist/", train=True, download=True,
                                                    transform=transforms.Compose([
                                                        transforms.ToTensor()
                                                    ])), batch_size=128, shuffle=True)
+
 cudnn.benchmark = True
 ae = Autoencoder().cuda()
 print(ae)
 critetion = nn.MSELoss()
 optimizer = torch.optim.Adam(ae.parameters())
 
-total_epoch = 20
+total_epoch = 50
 
-
-trainer = SAE(ae, optimizer, random_uniform)
+trainer = SAE(ae, optimizer, random_uniform, num_projections=25)
 ae.train()
 
 
@@ -93,6 +97,8 @@ for epoch in range(total_epoch):
 
     for index, (img, label) in enumerate(mnist):
         img = img.cuda()
+        #img = img.expand(img.data.shape[0], 3, 28, 28)
         batch_result = trainer.train(img)
         if (index+1) % 10 == 0:
-            print("{:.4f}".format(batch_result["loss"]))
+            print("loss: {:.4f} \t l1:{:.4f} \t bce:{:.4f} \t w2:{:.4f}".format(
+                batch_result["loss"], batch_result["l1"], batch_result["bce"], batch_result["w2"]))
