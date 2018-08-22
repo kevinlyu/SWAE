@@ -75,6 +75,19 @@ class SAE:
 
         return {'loss': loss, 'bce': bce, 'l1': l1, 'w2': w2, 'encode': z, 'decode': recon_x}
 
+    def test(self, x):
+        self.optimizer.zero_grad()
+        recon_x, z = self.model(x)
+        l1 = F.l1_loss(recon_x, x)
+        bce = F.binary_cross_entropy(recon_x, x)
+        recon_x = recon_x.cpu()
+        w2 = float(self.weight_swd)*sliced_wasserstein_distance(z,                                                     self.distribution_fn, self.num_projections, self.p)
+        w2 = w2.cuda()
+        loss = l1+bce+w2
+        
+        return {'loss': loss, 'bce': bce, 'l1': l1, 'w2': w2, 'encode': z, 'decode': recon_x}
+
+
 
 mnist = torch.utils.data.DataLoader(datasets.MNIST("./mnist/", train=True, download=True,
                                                    transform=transforms.Compose([
@@ -84,7 +97,6 @@ mnist = torch.utils.data.DataLoader(datasets.MNIST("./mnist/", train=True, downl
 cudnn.benchmark = True
 ae = Autoencoder().cuda()
 print(ae)
-critetion = nn.MSELoss()
 optimizer = torch.optim.Adam(ae.parameters())
 
 total_epoch = 50
